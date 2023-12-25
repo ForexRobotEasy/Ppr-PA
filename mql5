@@ -1,0 +1,117 @@
+
+//+------------------------------------------------------------------+
+//|                                                   Ppr PA.mq5     |
+//|                   Copyright 2022, Forex Robot Easy Team          |
+//|                              https://forexroboteasy.com           |
+//+------------------------------------------------------------------+
+
+#property strict
+#property version '1.00'
+#property description 'Ppr PA - PPR Pattern Recognition Indicator'
+
+// Indicator input parameters
+input int period = 14;     // PPR period
+input color buyColor = clrGreen;     // Color for buy signals
+input color sellColor = clrRed;     // Color for sell signals
+
+// Global variables
+double pprBuffer[];     // Array to store PPR values
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+   // Set indicator buffers
+   SetIndexBuffer(0, pprBuffer, INDICATOR_DATA);
+
+   // Set indicator label
+   IndicatorSetString(INDICATOR_SHORTNAME, 'Ppr PA');
+
+   // Set indicator parameters
+   IndicatorSetInteger(INDICATOR_DIGITS, _Digits);
+   IndicatorSetInteger(INDICATOR_PERIOD, period);
+
+   return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                               |
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int &spread[])
+{
+   // Calculate PPR pattern on the chart
+   for (int i = prev_calculated; i < rates_total; i++)
+   {
+      // Calculate PPR value for the current bar
+      double pprValue = CalculatePpr(i, high, low);
+
+      // Store PPR value in the buffer
+      pprBuffer[i] = pprValue;
+   }
+
+   // Check for PPR pattern and generate signals
+   for (int i = MathMax(prev_calculated, period); i < rates_total; i++)
+   {
+      // Check for PPR pattern
+      if (IsPprPattern(i, pprBuffer))
+      {
+         // Generate buy signal
+         if (pprBuffer[i] < pprBuffer[i-1])
+            PlotSignal(i, buyColor, 'BUY');
+
+         // Generate sell signal
+         if (pprBuffer[i] > pprBuffer[i-1])
+            PlotSignal(i, sellColor, 'SELL');
+      }
+   }
+
+   return(rates_total);
+}
+
+//+------------------------------------------------------------------+
+//| Calculate PPR value for the given bar                             |
+//+------------------------------------------------------------------+
+double CalculatePpr(const int index,
+                    const double &high[],
+                    const double &low[])
+{
+   // Calculate PPR value
+   double pprValue = high[index] - low[index];
+
+   return pprValue;
+}
+
+//+------------------------------------------------------------------+
+//| Check for PPR pattern                                             |
+//+------------------------------------------------------------------+
+bool IsPprPattern(const int index,
+                  const double &pprBuffer[])
+{
+   // Check if current PPR value is greater than previous PPR value
+   if (pprBuffer[index] > pprBuffer[index-1])
+      return true;
+   else
+      return false;
+}
+
+//+------------------------------------------------------------------+
+//| Plot signal on the chart                                          |
+//+------------------------------------------------------------------+
+void PlotSignal(const int index,
+                const color signalColor,
+                const string signalText)
+{
+   // Plot signal arrow on the chart
+   ChartSetInteger(0, CHART_ARROW, index, signalColor);
+   ChartSetString(0, CHART_COMMENT, index, signalText);
+}
